@@ -1,25 +1,11 @@
-const { ipcMain, BrowserWindow, app } = require("electron");
+const { ipcMain, BrowserWindow, app, MessageChannelMain } = require("electron");
 const path = require("path");
 app.allowRendererProcessReuse = true;
-const cpus = require("os").cpus().length;
-console.log("cpus: " + cpus);
-
-// stack of available background threads
-var available = [];
-
-// queue of tasks to be done
-var tasks = [];
-
-// hand the tasks out to waiting threads
-function doIt() {
-  while (available.length > 0 && tasks.length > 0) {
-    var task = tasks.shift();
-    available.shift().send(task[0], task[1]);
-  }
-  renderer.webContents.send("status", available.length, tasks.length);
-}
+/** @type {BrowserWindow} */
+let renderer;
 
 // Create a hidden background window
+/** @returns {BrowserWindow} */
 function createBgWindow() {
   result = new BrowserWindow({
     show: false,
@@ -50,33 +36,23 @@ app.whenReady().then(function () {
     app.quit();
   });
 
-  // create background thread for each cpu
-  createBgWindow();
+  // create background thread
+  const background = createBgWindow();
 
   // Main thread can receive directly from windows
   ipcMain.on("to-main", (event, arg) => {
-    console.log(arg);
-    renderer.webContents.send("to-renderer")
+    renderer.webContents.send("to-renderer", arg);
   });
 
-  // Windows can talk to each other via main
+  
+  const { port1, port2 } = new MessageChannelMain();
+  renderer.webContents.postMessage("port", null, [port1]);
+  background.webContents.postMessage("port", null, [port2]);
+
+  // Send message to renderer through ipc (for the main ipc tests)
   ipcMain.on("for-renderer", (event, arg) => {
     renderer.webContents.send("to-renderer", arg);
   });
-  ipcMain.on("for-background", (event, arg) => {
-    tasks.push(["message", arg]);
-    doIt();
-  });
 
-  // heavy processing done in the background thread
-  // so UI and main threads remain responsive
-  ipcMain.on("assign-task", (event, arg) => {
-    tasks.push(["task", arg]);
-    doIt();
-  });
-
-  ipcMain.on("ready", (event, arg) => {
-    available.push(event.sender);
-    doIt();
-  });
+  renderer.webContents.openDevTools();
 });

@@ -1,41 +1,14 @@
 <h1>Background</h1>
 
 <script type="text/javascript">
-  // Send logs as messages to the main thread to show on the console
-  function log(value) {
-    window.api.log(value);
-  }
-
-  // let the main thread know this thread is ready to process something
-  function ready() {
-    window.api.ready();
-  }
-
-  // do some work that will tie up the processor for a while
-  function work() {
-    // see https://gist.github.com/tkrueger/3500612 for generating load
-    var start = new Date().getTime();
-    var result = 0;
-    var finished = false;
-    while (!finished) {
-      result += Math.random() * Math.random();
-      finished = new Date().getTime() > start + 10000;
+  /** @type {MessagePort} */
+  let messagePort;
+  window.onmessage = (event) => {
+    const [port] = event.ports;
+    messagePort = port;
+    window.onmessage = null;
+    messagePort.onmessage = ({ data }) => {
+      messagePort.postMessage(data);
     }
-  }
-
-  // if message is received, pass it back to the renderer via the main thread
-  window.api.message((arg) => {
-    log("received: " + arg);
-    window.api.forRenderer(arg);
-    ready();
-  });
-
-  window.api.task((arg) => {
-    log("starting: " + arg);
-    work();
-    log("finished: " + arg);
-    ready();
-  });
-
-  ready();
+  };
 </script>
