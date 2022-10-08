@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <!-- https://electronjs.org/docs/tutorial/security#csp-meta-tag -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="script-src 'self' 'unsafe-inline';"
+    />
+    <script type="text/javascript">
+      function setVal(id, value) {
+        document.getElementById(id).innerHTML = value;
+      }
+
+      function toUtility() {
+        window.api.toUtility(document.getElementById("iterations").value);
+      }
+
+      let _sent = 0;
+      function toMain() {
+	const iterations = +(document.getElementById("iterations").value);
+	for (let i = 0; i < iterations; i++) {
+		window.api.toMain({ someData: "make this larger and larger" });
+		setVal("sent", ++_sent);
+	}
+      }
+      let r = 0;
+      window.api.toRenderer(() => {
+	r++;
+        setVal("received", r);
+      });
+    </script>
+  </head>
+  <body>
+    <h2>Background Processing Tests</h2>
+
+    Msg: <input id="iterations" type="textfield" value="number of messages to send" /><br />
+    <button onclick="toUtility()">Start Message Channel</button><br />
+    <button onclick="toMain()">Start Electron IPC</button>
+    <br /><br />
+
+    <label id="sent">0</label> sent <br />
+    <label id="received">0</label> received
+  </body>
+</html>
