@@ -1,5 +1,5 @@
 {
-  "name": "electron-background-processing",
+  "name": "electron-ipc-tests",
   "main": "main.js",
   "dependencies": {
     "electron": "^15.2.0"
