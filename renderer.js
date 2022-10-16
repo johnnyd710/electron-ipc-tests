@@ -7,8 +7,12 @@ function setVal(id, value) {
 }
 
 async function startTests() {
+    setVal("resultsUtilAvg", 0);
+    setVal("resultsMainAvg", 0);
+    document.getElementById("StartTests").disabled = true;
     await utilityTests();
     await mainTests();
+    document.getElementById("StartTests").disabled = false;
 }
 
 async function utilityTests() {
