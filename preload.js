@@ -27,8 +27,8 @@ contextBridge.exposeInMainWorld("api", {
 
   toRenderer: (func) =>
     ipcRenderer.on("to-renderer", (event, ...args) => func(...args)),
-  rmToRenderer: (func) =>
-    ipcRenderer.off("to-renderer", (event, ...args) => func(...args)),
+  removeAllListeners: (channel) =>
+    ipcRenderer.removeAllListeners(channel),
   message: (func) =>
     ipcRenderer.on("message", (event, ...args) => func(...args)),
 });

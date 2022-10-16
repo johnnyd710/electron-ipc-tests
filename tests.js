@@ -32,7 +32,7 @@ export async function toMainTest(iterations, pSize) {
         resolve = undefined;
     }
 
-    window.api.rmToRenderer(listener);
+    window.api.removeAllListeners("to-renderer");
     return measurements;
 }
 
