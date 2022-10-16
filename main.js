@@ -35,6 +35,7 @@ app.whenReady().then(function () {
     // call quit to exit, otherwise the background windows will keep the app running
     app.quit();
   });
+  renderer.webContents.openDevTools();
 
   // create background thread
   const background = createBgWindow();
@@ -46,13 +47,16 @@ app.whenReady().then(function () {
 
   
   const { port1, port2 } = new MessageChannelMain();
-  renderer.webContents.postMessage("port", null, [port1]);
-  background.webContents.postMessage("port", null, [port2]);
+  renderer.once("ready-to-show", () => {
+    renderer.webContents.postMessage("port", null, [port1]);
+  })
+  background.once("ready-to-show", () => {
+    background.webContents.postMessage("port", null, [port2]);
+  })
 
   // Send message to renderer through ipc (for the main ipc tests)
   ipcMain.on("for-renderer", (event, arg) => {
     renderer.webContents.send("to-renderer", arg);
   });
 
-  renderer.webContents.openDevTools();
 });
