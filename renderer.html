@@ -7,12 +7,14 @@
       http-equiv="Content-Security-Policy"
       content="script-src 'self' 'unsafe-inline';"
     />
+    <script src="./payload.js" type="module"></script>
     <script src="./tests.js" type="module"></script>
   </head>
   <body>
     <h2>IPC Tests</h2>
 
     Msg: <input id="iterations" type="number" value="10" /><br />
+    Payload size (1, 2, or 3): <input id="payload" type="number" value="2" /><br />
     <button id="StartTests">Start Tests</button>
     <br /><br />
 

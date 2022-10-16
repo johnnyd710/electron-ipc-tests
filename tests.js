@@ -1,8 +1,4 @@
-const payload = {
-    "small": {
-        "test": "a small payload test"
-    }
-}
+import { payload } from "./payload.js";
 
 /** @type {MessagePort} */
 let messagePort;
@@ -14,9 +10,10 @@ window.onmessage = (event) => {
   
 /** sends ipc messages roundtrip to main process and back again
  * @param {number} iterations
+ * @param {number} pSize
  * @returns { Promise<Map<string, string>> } map of each message sent roundtrip with measurement time
  */
-export async function toMainTest(iterations) {
+export async function toMainTest(iterations, pSize) {
     const sent = new Map;
     const measurements = new Map;
     let resolve;
@@ -30,7 +27,7 @@ export async function toMainTest(iterations) {
     for (let i = 1; i <= iterations; i++) {
         const response = new Promise(r => resolve = r);
         sent.set(i, performance.now());
-        window.api.toMain({ id: i, payload: payload.small });
+        window.api.toMain({ id: i, payload: payload[pSize] });
         await response;
         resolve = undefined;
     }
@@ -41,9 +38,10 @@ export async function toMainTest(iterations) {
 
 /** sends ipc messages roundtrip to background renderer and back again
  * @param {number} iterations
+ * @param {number} pSize
  * @returns { Promise<Map<string, string>> } map of each message sent roundtrip with measurement time
  */
- export async function toUtilityTest(iterations) {
+ export async function toUtilityTest(iterations, pSize) {
     const sent = new Map;
     const measurements = new Map;
     const listener = ({ data: { id, payload }}) => {
@@ -58,10 +56,11 @@ export async function toMainTest(iterations) {
     for (let i = 1; i <= iterations; i++) {
         const response = new Promise(r => resolve = r);
         sent.set(i, performance.now());
-        messagePort.postMessage({ id: i, payload: payload.small });
+        messagePort.postMessage({ id: i, payload: payload[pSize] });
         await response;
         resolve = undefined;
     }
     messagePort.onmessage = null;
     return measurements;
 }
+

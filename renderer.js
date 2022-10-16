@@ -13,7 +13,8 @@ async function startTests() {
 
 async function utilityTests() {
     const iterations = +(document.getElementById("iterations").value);
-    const measurements = await toUtilityTest(iterations);
+    const pSize = +(document.getElementById("payload").value);
+    const measurements = await toUtilityTest(iterations, pSize);
     const average = (Array.from(measurements.values())
         .reduce((prev, curr) => prev + curr, 0))
         / measurements.size;
@@ -22,7 +23,8 @@ async function utilityTests() {
 
 async function mainTests() {
     const iterations = +(document.getElementById("iterations").value);
-    const measurements = await toMainTest(iterations);
+    const pSize = +(document.getElementById("payload").value);
+    const measurements = await toMainTest(iterations, pSize);
     const average = (Array.from(measurements.values())
         .reduce((prev, curr) => prev + curr, 0))
         / measurements.size;
