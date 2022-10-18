@@ -1,4 +1,10 @@
-const { ipcMain, BrowserWindow, app, MessageChannelMain } = require("electron");
+const {
+  ipcMain,
+  BrowserWindow,
+  app,
+  MessageChannelMain,
+  ipcRenderer,
+} = require("electron");
 const path = require("path");
 app.allowRendererProcessReuse = true;
 /** @type {BrowserWindow} */
@@ -23,8 +29,8 @@ function createBgWindow() {
 app.whenReady().then(function () {
   // Create the "renderer" window which contains the visible UI
   renderer = new BrowserWindow({
-    width: 500,
-    height: 400,
+    width: 1000,
+    height: 800,
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
     },
@@ -39,11 +45,6 @@ app.whenReady().then(function () {
   // create background thread
   const background = createBgWindow();
 
-  // Main thread can receive directly from windows
-  ipcMain.on("to-main", (event, arg) => {
-    renderer.webContents.send("to-renderer", arg);
-  });
-
   const { port1, port2 } = new MessageChannelMain();
   renderer.once("ready-to-show", () => {
     renderer.webContents.postMessage("port", null, [port1]);
@@ -52,8 +53,9 @@ app.whenReady().then(function () {
     background.webContents.postMessage("port", null, [port2]);
   });
 
-  // Send message to renderer through ipc (for the main ipc tests)
-  ipcMain.on("for-renderer", (event, arg) => {
-    renderer.webContents.send("to-renderer", arg);
+  renderer.webContents.openDevTools();
+
+  ipcMain.handle("to-main", (ev, payload) => {
+    return payload;
   });
 });

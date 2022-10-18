@@ -16,19 +16,5 @@ ipcRenderer.on("port", async (event) => {
 });
 
 contextBridge.exposeInMainWorld("api", {
-  toMain: (data) => ipcRenderer.send("to-main", data),
-  forBackground: (data) => ipcRenderer.send("for-background", data),
-  forRenderer: (data) => {
-    ipcRenderer.send("for-renderer", "[bg-" + process.pid + "] reply: " + data);
-  },
-  log: (data) => {
-    ipcRenderer.send("to-main", "[bg-" + process.pid + "]: " + data);
-  },
-
-  toRenderer: (func) =>
-    ipcRenderer.on("to-renderer", (event, ...args) => func(...args)),
-  removeAllListeners: (channel) =>
-    ipcRenderer.removeAllListeners(channel),
-  message: (func) =>
-    ipcRenderer.on("message", (event, ...args) => func(...args)),
+  invoke: (channel, data) => ipcRenderer.invoke(channel, data),
 });

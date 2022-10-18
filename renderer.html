@@ -2,11 +2,10 @@
 <html>
   <head>
     <meta charset="UTF-8" />
-    <!-- https://electronjs.org/docs/tutorial/security#csp-meta-tag -->
-    <meta
-      http-equiv="Content-Security-Policy"
-      content="script-src 'self' 'unsafe-inline';"
-    />
+    <script src="https://cdn.jsdelivr.net/npm/lodash@4.17.21/lodash.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/benchmark@2.1.4/benchmark.min.js"></script>
+    <link rel="stylesheet" href="./renderer.css"></link>
+    <script src="./payload.js" type="module"></script>
     <script src="./payload.js" type="module"></script>
     <script src="./tests.js" type="module"></script>
   </head>
@@ -17,11 +16,6 @@
     Payload size (1, 2, or 3): <input id="payload" type="number" value="2" /><br />
     <button id="StartTests">Start Tests</button>
     <br /><br />
-
-    Latency IPC Main <label id="resultsMainAvg">0</label> ms
-    <br/>
-    Latency MessagePort <label id="resultsUtilAvg">0</label> ms
-    <br/>
     <script src="./renderer.js" type="module"></script>
   </body>
 </html>
