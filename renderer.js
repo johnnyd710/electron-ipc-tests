@@ -6,6 +6,22 @@ let messagePort;
 const handlers = new Map();
 let nextId = 0;
 
+const TestHelpers = {
+  generateStaticTypedArray: (kb) => {
+    const bytes = kb * 1000;
+    const buffer = new ArrayBuffer(bytes);
+    return new Uint8Array(buffer);
+  },
+  generateStaticJson: () => {
+    const jsonPayloadSize = {
+      SMALL: 1,
+      MEDIUM: 2,
+      LARGE: 3,
+    };
+    return payload[jsonPayloadSize.MEDIUM];
+  },
+};
+
 const UiHelpers = {
   setVal: (id, value) => {
     document.getElementById(id).innerHTML = value;
@@ -61,17 +77,26 @@ window.onmessage = (event) => {
 
 document.getElementById("StartTests").addEventListener("click", startTests);
 
-async function sendViaMessagePort(payloadSize) {
+/** @param binary { Uint8Array } */
+async function sendViaMessagePortUsingTransferable(binary) {
   return new Promise((r) => {
     const id = ++nextId;
     handlers.set(id, r);
-    messagePort.postMessage({ id, payload: payload[payloadSize] });
+    messagePort.postMessage({ id, binary }, [binary]);
   });
 }
 
-async function sendViaIpcRenderer(payloadSize) {
+async function sendViaMessagePort(payload) {
+  return new Promise((r) => {
+    const id = ++nextId;
+    handlers.set(id, r);
+    messagePort.postMessage({ id, payload });
+  });
+}
+
+async function sendViaIpcRenderer(payload) {
   const response = await window.api.invoke("to-main", {
-    payload: payload[payloadSize],
+    payload,
   });
   return response;
 }
@@ -79,24 +104,55 @@ async function sendViaIpcRenderer(payloadSize) {
 async function startTests() {
   UiHelpers.clearUI();
   UiHelpers.setButton(true);
-  runBenchmark(UiHelpers.getPayloadSize());
+  await runBenchmark();
 }
 
-/** @param payloadSize { number } */
-function runBenchmark(payloadSize) {
+async function runBenchmark() {
   const suite = new Benchmark.Suite();
   suite
-    .add("MessagePort", {
+    .add("MessagePort#Json", {
       defer: true,
       fn: async function (deferred) {
-        await sendViaMessagePort(payloadSize);
+        const payload = TestHelpers.generateStaticJson();
+        await sendViaMessagePort(payload);
         deferred.resolve();
       },
     })
-    .add("IpcRenderer", {
+    .add("IpcRenderer#Json", {
       defer: true,
       fn: async function (deferred) {
-        await sendViaIpcRenderer(payloadSize);
+        const payload = TestHelpers.generateStaticJson();
+        await sendViaIpcRenderer(payload);
+        deferred.resolve();
+      },
+    })
+    .add("MessagePort#Uint8Array", {
+      defer: true,
+      fn: async function (deferred) {
+        const payload = TestHelpers.generateStaticTypedArray(
+          UiHelpers.getPayloadSize()
+        );
+        await sendViaMessagePort(payload);
+        deferred.resolve();
+      },
+    })
+    .add("MessagePort#Uint8ArrayOptimized", {
+      defer: true,
+      fn: async function (deferred) {
+        const payload = TestHelpers.generateStaticTypedArray(
+          UiHelpers.getPayloadSize()
+        );
+        await sendViaMessagePortUsingTransferable(payload.buffer);
+        deferred.resolve();
+      },
+    })
+    .add("IpcRenderer#Uint8Array", {
+      defer: true,
+      fn: async function (deferred) {
+        const payload = TestHelpers.generateStaticTypedArray(
+          UiHelpers.getPayloadSize()
+        );
+        await sendViaIpcRenderer(payload);
         deferred.resolve();
       },
     })
