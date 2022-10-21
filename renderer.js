@@ -28,9 +28,11 @@ const UiHelpers = {
   },
   setButton: (enabled) => {
     document.getElementById("StartTests").disabled = enabled;
+    document.getElementById("StartTestsAnimate").disabled = enabled;
   },
   clearUI: () => {
     UiHelpers.resetTable();
+    document.getElementById("animation")?.remove();
   },
   getPayloadSize: () => +document.getElementById("payload").value,
   /** @param s { { [key: string]: {} } } */
@@ -62,6 +64,15 @@ const UiHelpers = {
   resetTable: () => {
     document.getElementById("results-table")?.remove();
   },
+  animate: () => {
+    const animation = document.createElement("img");
+    animation.id = "animation";
+    animation.src = "https://i.imgur.com/kDDFvUp.png";
+    animation.height = 100;
+    animation.width = 100;
+    animation.className = "rotate";
+    document.body.appendChild(animation);
+  }
 };
 
 window.onmessage = (event) => {
@@ -75,7 +86,8 @@ window.onmessage = (event) => {
   };
 };
 
-document.getElementById("StartTests").addEventListener("click", startTests);
+document.getElementById("StartTests").addEventListener("click", () => startTests(false));
+document.getElementById("StartTestsAnimate").addEventListener("click", () => startTests(true));
 
 /** @param binary { Uint8Array } */
 async function sendViaMessagePortUsingTransferable(binary) {
@@ -101,9 +113,11 @@ async function sendViaIpcRenderer(payload) {
   return response;
 }
 
-async function startTests() {
+/** @param animate { boolean } */
+async function startTests(animate) {
   UiHelpers.clearUI();
   UiHelpers.setButton(true);
+  if (animate) UiHelpers.animate();
   await runBenchmark();
 }
 

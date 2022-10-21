@@ -53,7 +53,7 @@ app.whenReady().then(function () {
     background.webContents.postMessage("port", null, [port2]);
   });
 
-  // renderer.webContents.openDevTools();
+  renderer.webContents.openDevTools();
 
   ipcMain.handle("to-main", (ev, payload) => {
     return { id: payload.id };
