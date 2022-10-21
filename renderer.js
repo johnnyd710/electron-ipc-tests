@@ -12,8 +12,11 @@ const UiHelpers = {
   setVal: (id, value) => {
     document.getElementById(id).innerHTML = value;
   },
-  setButton: (enabled) => {
+  setLoading: (enabled) => {
     document.getElementById("StartTests").disabled = enabled;
+    document.getElementById("loading").style.display = enabled
+      ? "block"
+      : "none";
   },
   clearUI: () => {
     UiHelpers.resetTable();
@@ -95,7 +98,7 @@ async function sendViaIpcRenderer(payload) {
 /** @param animate { boolean } */
 async function startTests() {
   UiHelpers.clearUI();
-  UiHelpers.setButton(true);
+  UiHelpers.setLoading(true);
   // const resultsBinary = await new BinaryTest(
   //   sendViaMessagePort,
   //   sendViaIpcRenderer,
@@ -112,5 +115,5 @@ async function startTests() {
     messagePort
   ).run();
   UiHelpers.outputTable(resultsThroughput, "throughput");
-  UiHelpers.setButton(false);
+  UiHelpers.setLoading(false);
 }

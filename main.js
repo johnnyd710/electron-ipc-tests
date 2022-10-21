@@ -59,16 +59,23 @@ app.whenReady().then(function () {
   });
 });
 
-async function throughputTests(kb) {
-  // blast throughput-test with data but don't block main?
-  let n = 0;
-  const startTime = performance.now();
-  while (performance.now() - startTime < 10_000) {
+async function throughputTests(mb) {
+  // pre-generate the arrays so we don't measure time to create fake data...
+  const data = [];
+  const sizeOfEachMessage = 128 * 1024; // in bytes
+  let curr = 0;
+  while (curr < mb) {
+    data.push(new Uint8Array(sizeOfEachMessage).map((v, i) => i));
+    curr += sizeOfEachMessage / 1024 / 1024; // convert back to mb
+  }
+  renderer.webContents.send("throughput-test", { start: true });
+  // now send them all to the frontend as fast as we can :)
+  data.forEach((d, i) => {
     const payload = {
-      data: new Uint8Array(kb * 1024 * 8).map((v, i) => i),
-      id: ++n,
+      data: d,
+      id: i,
     };
     renderer.webContents.send("throughput-test", payload);
-  }
+  });
   renderer.webContents.send("throughput-test", { done: true });
 }

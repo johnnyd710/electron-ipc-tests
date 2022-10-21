@@ -3,18 +3,23 @@
 <script type="text/javascript">
   /** @type {MessagePort} */
   let messagePort;
-  async function throughputTests(kb) {
-    // blast throughput-test with data but don't block main?
-    let n = 0;
-    const startTime = performance.now();
-    while (performance.now() - startTime < 10_000) {
-      const payload = {
-        data: new Uint8Array(kb * 1024 * 8).map((v, i) => i),
-        id: ++n,
-      };
-      messagePort.postMessage({ id: "throughput-test", payload }, [payload.data.buffer]); // TODO transferables
-      console.log(payload.data.byteLength)
+  async function throughputTests(mb) {
+    // pre-generate the arrays so we don't measure time to create fake data...
+    const data = [];
+    const sizeOfEachMessage = 1024 * 128; // in bytes
+    let curr = 0;
+    while (curr < mb) {
+      data.push(new Uint8Array(sizeOfEachMessage).map((v, i) => i));
+      curr += (sizeOfEachMessage) / 1024 / 1024; // convert back to mb
     }
+    messagePort.postMessage({ id: "throughput-test", payload: { start: true } });
+    data.forEach((d, i) => {
+      const payload = {
+        data: d,
+        id: i,
+      };
+      messagePort.postMessage({ id: "throughput-test", payload }, [payload.data.buffer]);
+    })
     messagePort.postMessage({ id: "throughput-test", payload: { done: true } });
   }
   window.onmessage = (event) => {
@@ -22,9 +27,9 @@
     messagePort = port;
     window.onmessage = null;
     messagePort.onmessage = ({ data }) => {
-      const { payload, id, t, kb } = data;
-      if (kb) {
-        throughputTests(kb);
+      const { payload, id, t, mb } = data;
+      if (mb) { // if mb is in message it must be a throughput test
+        throughputTests(mb);
       }
       if (t) {
         messagePort.postMessage({ id, payload }, [payload.buffer]);

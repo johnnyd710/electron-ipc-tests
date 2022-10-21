@@ -12,25 +12,23 @@ export class ThroughputTest {
 
   async run() {
     let results = {};
-    const payloads = [26, 128, 500, 1024];
-    for (const kb of payloads) {
-      const title = `MessagePort#${kb}KB`;
-      const count = await this.testUtility(kb);
-      const data = (count * kb) / 1024;
-      const seconds = 10;
+    const payloads = [32, 256, 512, 1024];
+    for (const mb of payloads) {
+      const title = `MessagePort#${mb}mb`;
+      const ms = await this.testUtility(mb);
+      const seconds = ms / 1000;
       results[title] = {
-        "MB/s": Number(data / seconds).toFixed(2),
-        samples: count,
+        "MB/s": Number(mb / seconds).toFixed(2),
+        ms: Number(ms).toFixed(2),
       };
     }
-    for (const kb of payloads) {
-      const title = `IpcRenderer#${kb}KB`;
-      const count = await this.testMain(kb);
-      const data = (count * kb) / 1024;
-      const seconds = 10;
+    for (const mb of payloads) {
+      const title = `IpcRenderer#${mb}mb`;
+      const ms = await this.testMain(mb);
+      const seconds = ms / 1000;
       results[title] = {
-        "MB/s": Number(data / seconds).toFixed(2),
-        samples: count,
+        "MB/s": Number(mb / seconds).toFixed(2),
+        ms: Number(ms).toFixed(2),
       };
     }
     const sortable = Object.fromEntries(
@@ -40,47 +38,53 @@ export class ThroughputTest {
   }
 
   /**
-   * @param kb { number }
+   * @param mb { number }
    * @returns results { Promise<number> }
    */
-  async testUtility(kb) {
+  async testUtility(mb) {
     let returnFn;
+    let start;
     const returnPromise = new Promise((r) => (returnFn = r));
     const collection = [];
     // add a listener to collect data and count responses
     const listener = (data) => {
-      if (data.done) {
+      if (data.start) {
+        start = performance.now();
+      } else if (data.done) {
         this.handlers.delete("throughput-test");
-        returnFn(collection.length);
+        returnFn(performance.now() - start);
       } else {
         collection.push(data.data);
       }
     };
     this.handlers.set("throughput-test", listener);
     // send a signal to main start the test
-    this.messagePort.postMessage({ id: "start-throughput-test", kb });
+    this.messagePort.postMessage({ id: "start-throughput-test", mb });
     return returnPromise;
   }
 
   /**
-   * @param kb { number }
+   * @param mb { number }
    * @returns results { Promise<number> }
    */
-  async testMain(kb) {
+  async testMain(mb) {
     let returnFn;
+    let start;
     const returnPromise = new Promise((r) => (returnFn = r));
     const collection = [];
     // add a listener to collect data and count responses
     window.api.addListener("throughput-test", (ev, data) => {
-      if (data.done) {
+      if (data.start) {
+        start = performance.now();
+      } else if (data.done) {
         window.api.rmListeners("throughput-test");
-        returnFn(collection.length);
+        returnFn(performance.now() - start);
       } else {
         collection.push(data.data);
       }
     });
     // send a signal to main start the test
-    await window.api.invoke("start-throughput-test", kb);
+    await window.api.invoke("start-throughput-test", mb);
     return returnPromise;
   }
 }
