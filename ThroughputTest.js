@@ -21,7 +21,7 @@ export class ThroughputTest {
     // do a few so we can take the average
     const title = `${name}#${dataTransferSize_MB}mb`;
     const runs = [];
-    const maxRuns = 3;
+    const maxRuns = 5;
     for (let i = 0; i < maxRuns; i++) {
       const ms = await fn(dataTransferSize_MB);
       runs.push(ms);

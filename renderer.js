@@ -99,17 +99,17 @@ async function sendViaIpcRenderer(payload) {
 async function startTests() {
   UiHelpers.clearUI();
   UiHelpers.setLoading(true);
-  // const resultsBinary = await new BinaryTest(
-  //   sendViaMessagePort,
-  //   sendViaIpcRenderer,
-  //   sendViaMessagePortUsingTransferable
-  // ).run();
-  // UiHelpers.outputTable(resultsBinary, "binary");
-  // const resultsJson = await new JsonTest(
-  //   sendViaMessagePort,
-  //   sendViaIpcRenderer
-  // ).run();
-  // UiHelpers.outputTable(resultsJson, "json");
+  const resultsBinary = await new BinaryTest(
+    sendViaMessagePort,
+    sendViaIpcRenderer,
+    sendViaMessagePortUsingTransferable
+  ).run();
+  UiHelpers.outputTable(resultsBinary, "binary");
+  const resultsJson = await new JsonTest(
+    sendViaMessagePort,
+    sendViaIpcRenderer
+  ).run();
+  UiHelpers.outputTable(resultsJson, "json");
   const resultsThroughput = await new ThroughputTest(
     handlers,
     messagePort

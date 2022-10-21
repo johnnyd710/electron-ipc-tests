@@ -61,7 +61,7 @@ app.whenReady().then(function () {
 async function throughputTests(mb) {
   // pre-generate the arrays so we don't measure time to create fake data...
   const data = [];
-  const sizeOfEachMessage = 128 * 1024; // in bytes
+  const sizeOfEachMessage = 128 * 1024 * 10; // in bytes
   let curr = 0;
   while (curr < mb) {
     data.push(new Uint8Array(sizeOfEachMessage).map((v, i) => i));
