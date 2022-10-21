@@ -1,5 +1,6 @@
 import { JsonTest } from "./JsonTest.js";
 import { BinaryTest } from "./BinaryTest.js";
+import { ThroughputTest } from "./ThroughputTest.js";
 
 /** @type {MessagePort} */
 let messagePort;
@@ -58,8 +59,8 @@ window.onmessage = (event) => {
   window.onmessage = null;
 
   messagePort.onmessage = ({ data: { id, payload } }) => {
-    handlers.get(id)?.(id);
-    handlers.delete(id); // all handlers only last once
+    handlers.get(id)?.(payload); // resolve id
+    // handlers.delete(id); // all handlers only last once
   };
 };
 
@@ -88,23 +89,28 @@ async function sendViaIpcRenderer(payload) {
     id,
     payload,
   });
-  return response.id;
+  return response.payload;
 }
 
 /** @param animate { boolean } */
 async function startTests() {
   UiHelpers.clearUI();
   UiHelpers.setButton(true);
-  const resultsBinary = await new BinaryTest(
-    sendViaMessagePort,
-    sendViaIpcRenderer,
-    sendViaMessagePortUsingTransferable
+  // const resultsBinary = await new BinaryTest(
+  //   sendViaMessagePort,
+  //   sendViaIpcRenderer,
+  //   sendViaMessagePortUsingTransferable
+  // ).run();
+  // UiHelpers.outputTable(resultsBinary, "binary");
+  // const resultsJson = await new JsonTest(
+  //   sendViaMessagePort,
+  //   sendViaIpcRenderer
+  // ).run();
+  // UiHelpers.outputTable(resultsJson, "json");
+  const resultsThroughput = await new ThroughputTest(
+    handlers,
+    messagePort
   ).run();
-  UiHelpers.outputTable(resultsBinary, "binary");
-  const resultsJson = await new JsonTest(
-    sendViaMessagePort,
-    sendViaIpcRenderer
-  ).run();
-  UiHelpers.outputTable(resultsJson, "json");
+  UiHelpers.outputTable(resultsThroughput, "throughput");
   UiHelpers.setButton(false);
 }

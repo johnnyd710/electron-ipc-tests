@@ -3,12 +3,29 @@
 <script type="text/javascript">
   /** @type {MessagePort} */
   let messagePort;
+  async function throughputTests(kb) {
+    // blast throughput-test with data but don't block main?
+    let n = 0;
+    const startTime = performance.now();
+    while (performance.now() - startTime < 10_000) {
+      const payload = {
+        data: new Uint8Array(kb * 1024 * 8).map((v, i) => i),
+        id: ++n,
+      };
+      messagePort.postMessage({ id: "throughput-test", payload }, [payload.data.buffer]); // TODO transferables
+      console.log(payload.data.byteLength)
+    }
+    messagePort.postMessage({ id: "throughput-test", payload: { done: true } });
+  }
   window.onmessage = (event) => {
     const [port] = event.ports;
     messagePort = port;
     window.onmessage = null;
     messagePort.onmessage = ({ data }) => {
-      const { payload, id, t } = data;
+      const { payload, id, t, kb } = data;
+      if (kb) {
+        throughputTests(kb);
+      }
       if (t) {
         messagePort.postMessage({ id, payload }, [payload.buffer]);
       } else {

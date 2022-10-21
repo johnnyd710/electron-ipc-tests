@@ -1,6 +1,6 @@
 const { ipcMain, BrowserWindow, app, MessageChannelMain } = require("electron");
 const path = require("path");
-app.allowRendererProcessReuse = true;
+
 /** @type {BrowserWindow} */
 let renderer;
 
@@ -53,4 +53,22 @@ app.whenReady().then(function () {
     const { payload, id } = data;
     return { id, payload };
   });
+
+  ipcMain.handle("start-throughput-test", (ev, kb) => {
+    throughputTests(kb);
+  });
 });
+
+async function throughputTests(kb) {
+  // blast throughput-test with data but don't block main?
+  let n = 0;
+  const startTime = performance.now();
+  while (performance.now() - startTime < 10_000) {
+    const payload = {
+      data: new Uint8Array(kb * 1024 * 8).map((v, i) => i),
+      id: ++n,
+    };
+    renderer.webContents.send("throughput-test", payload);
+  }
+  renderer.webContents.send("throughput-test", { done: true });
+}
