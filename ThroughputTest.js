@@ -10,36 +10,40 @@ export class ThroughputTest {
     this.messagePort = messagePort;
   }
 
+  /**
+   * Adds result of _run to results
+   * @param { (mb: number) => Promise<number>} fn
+   * @param { {[key: string]: number } } results
+   * @param { string } name
+   */
+  async _run(fn, results, name) {
+    const dataTransferSize_MB = 512; // 512 MB worth of data from backend to frontend
+    // do a few so we can take the average
+    const title = `${name}#${dataTransferSize_MB}mb`;
+    const runs = [];
+    const maxRuns = 3;
+    for (let i = 0; i < maxRuns; i++) {
+      const ms = await fn(dataTransferSize_MB);
+      runs.push(ms);
+    }
+    const average = runs.reduce((p, c) => p + c, 0) / maxRuns;
+    const seconds = average / 1000;
+    results[title] = {
+      "MB/s": Number(dataTransferSize_MB / seconds).toFixed(2),
+      "avg time (ms)": Number(average).toFixed(2),
+      runs: maxRuns,
+    };
+  }
+
   async run() {
     let results = {};
-    const payloads = [32, 256, 512];
-    for (const mb of payloads) {
-      const title = `MessagePort#${mb}mb`;
-      const ms = await this.testUtility(mb);
-      const seconds = ms / 1000;
-      results[title] = {
-        "MB/s": Number(mb / seconds).toFixed(2),
-        ms: Number(ms).toFixed(2),
-      };
-    }
-    for (const mb of payloads) {
-      const title = `MessagePortOptimized#${mb}mb`;
-      const ms = await this.testUtility(mb, true);
-      const seconds = ms / 1000;
-      results[title] = {
-        "MB/s": Number(mb / seconds).toFixed(2),
-        ms: Number(ms).toFixed(2),
-      };
-    }
-    for (const mb of payloads) {
-      const title = `IpcRenderer#${mb}mb`;
-      const ms = await this.testMain(mb);
-      const seconds = ms / 1000;
-      results[title] = {
-        "MB/s": Number(mb / seconds).toFixed(2),
-        ms: Number(ms).toFixed(2),
-      };
-    }
+    await this._run((mb) => this.testUtility(mb), results, "MessagePort");
+    await this._run(
+      (mb) => this.testUtility(mb, true),
+      results,
+      "MessagePortOptimized"
+    );
+    await this._run((mb) => this.testMain(mb), results, "IpcRenderer");
     const sortable = Object.fromEntries(
       Object.entries(results).sort(([, a], [, b]) => b["MB/s"] - a["MB/s"])
     );

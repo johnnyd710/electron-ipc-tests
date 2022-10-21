@@ -55,6 +55,7 @@ app.whenReady().then(function () {
   ipcMain.handle("start-throughput-test", (ev, kb) => {
     throughputTests(kb);
   });
+  renderer.webContents.openDevTools();
 });
 
 async function throughputTests(mb) {
