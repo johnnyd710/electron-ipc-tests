@@ -1,12 +1,6 @@
-const {
-  ipcMain,
-  BrowserWindow,
-  app,
-  MessageChannelMain,
-  ipcRenderer,
-} = require("electron");
+const { ipcMain, BrowserWindow, app, MessageChannelMain } = require("electron");
 const path = require("path");
-app.allowRendererProcessReuse = true;
+
 /** @type {BrowserWindow} */
 let renderer;
 
@@ -53,9 +47,34 @@ app.whenReady().then(function () {
     background.webContents.postMessage("port", null, [port2]);
   });
 
-  renderer.webContents.openDevTools();
-
-  ipcMain.handle("to-main", (ev, payload) => {
-    return { id: payload.id };
+  ipcMain.handle("to-main", (ev, data) => {
+    const { payload, id } = data;
+    return { id, payload };
   });
+
+  ipcMain.handle("start-throughput-test", (ev, kb) => {
+    throughputTests(kb);
+  });
+  renderer.webContents.openDevTools();
 });
+
+async function throughputTests(mb) {
+  // pre-generate the arrays so we don't measure time to create fake data...
+  const data = [];
+  const sizeOfEachMessage = 128 * 1024 * 10; // in bytes
+  let curr = 0;
+  while (curr < mb) {
+    data.push(new Uint8Array(sizeOfEachMessage).map((v, i) => i));
+    curr += sizeOfEachMessage / 1024 / 1024; // convert back to mb
+  }
+  renderer.webContents.send("throughput-test", { start: true });
+  // now send them all to the frontend as fast as we can :)
+  data.forEach((d, i) => {
+    const payload = {
+      data: d,
+      id: i,
+    };
+    renderer.webContents.send("throughput-test", payload);
+  });
+  renderer.webContents.send("throughput-test", { done: true });
+}

@@ -3,12 +3,48 @@
 <script type="text/javascript">
   /** @type {MessagePort} */
   let messagePort;
+  /**
+   * @param mb { number }
+   * @param optimize { boolean }
+   */
+  async function throughputTests(mb, optimize) {
+    // pre-generate the arrays so we don't measure time to create fake data...
+    const data = [];
+    const sizeOfEachMessage = (128 * 1024) * 10; // in bytes
+    let curr = 0;
+    while (curr < mb) {
+      data.push(new Uint8Array(sizeOfEachMessage).map((v, i) => i));
+      curr += (sizeOfEachMessage) / 1024 / 1024; // convert back to mb
+    }
+    messagePort.postMessage({ id: "throughput-test", payload: { start: true } });
+    // now send them all to the frontend as fast as we can :)
+    data.forEach((d, i) => {
+      const payload = {
+        data: d,
+        id: i,
+      };
+      if (optimize) {
+        messagePort.postMessage({ id: "throughput-test", payload }, [payload.data.buffer]);
+      } else {
+        messagePort.postMessage({ id: "throughput-test", payload });
+      }
+    })
+    messagePort.postMessage({ id: "throughput-test", payload: { done: true } });
+  }
   window.onmessage = (event) => {
     const [port] = event.ports;
     messagePort = port;
     window.onmessage = null;
     messagePort.onmessage = ({ data }) => {
-      messagePort.postMessage({ id: data.id });
+      const { payload, id, t, mb, optimize } = data;
+      if (mb) { // if mb is in message it must be a throughput test
+        throughputTests(mb, optimize);
+      }
+      if (t) {
+        messagePort.postMessage({ id, payload }, [payload.buffer]);
+      } else {
+        messagePort.postMessage({ id, payload });
+      }
     }
   };
 </script>

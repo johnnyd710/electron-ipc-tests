@@ -17,4 +17,6 @@ ipcRenderer.on("port", async (event) => {
 
 contextBridge.exposeInMainWorld("api", {
   invoke: (channel, data) => ipcRenderer.invoke(channel, data),
+  addListener: (channel, fn) => ipcRenderer.addListener(channel, fn),
+  rmListeners: (channel) => ipcRenderer.removeAllListeners(channel),
 });

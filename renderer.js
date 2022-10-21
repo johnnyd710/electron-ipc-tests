@@ -1,4 +1,6 @@
-import { payload } from "./payload.js";
+import { JsonTest } from "./JsonTest.js";
+import { BinaryTest } from "./BinaryTest.js";
+import { ThroughputTest } from "./ThroughputTest.js";
 
 /** @type {MessagePort} */
 let messagePort;
@@ -6,37 +8,25 @@ let messagePort;
 const handlers = new Map();
 let nextId = 0;
 
-const TestHelpers = {
-  generateStaticTypedArray: (kb) => {
-    const bytes = kb * 1000;
-    const buffer = new ArrayBuffer(bytes);
-    return new Uint8Array(buffer);
-  },
-  generateStaticJson: () => {
-    const jsonPayloadSize = {
-      SMALL: 1,
-      MEDIUM: 2,
-      LARGE: 3,
-    };
-    return payload[jsonPayloadSize.MEDIUM];
-  },
-};
-
 const UiHelpers = {
   setVal: (id, value) => {
     document.getElementById(id).innerHTML = value;
   },
-  setButton: (enabled) => {
+  setLoading: (enabled) => {
     document.getElementById("StartTests").disabled = enabled;
-    document.getElementById("StartTestsAnimate").disabled = enabled;
+    document.getElementById("loading").style.display = enabled
+      ? "block"
+      : "none";
   },
   clearUI: () => {
     UiHelpers.resetTable();
-    document.getElementById("animation")?.remove();
   },
-  getPayloadSize: () => +document.getElementById("payload").value,
-  /** @param s { { [key: string]: {} } } */
-  outputTable: (s) => {
+  // getPayloadSize: () => +document.getElementById("payload").value,
+  /**
+   * @param s { { [key: string]: {} } }
+   * @param id { string }
+   */
+  outputTable: (s, id) => {
     const cols = [];
     for (const k in s) {
       for (const c in s[k]) {
@@ -57,22 +47,13 @@ const UiHelpers = {
     }
     html += "</tbody>";
     const table = document.createElement("table");
-    table.id = "results-table";
+    table.id = `results-table-${id}`;
     table.innerHTML = html;
     document.body.appendChild(table);
   },
   resetTable: () => {
-    document.getElementById("results-table")?.remove();
+    document.querySelectorAll("table")?.forEach((t) => t.remove());
   },
-  animate: () => {
-    const animation = document.createElement("img");
-    animation.id = "animation";
-    animation.src = "https://i.imgur.com/kDDFvUp.png";
-    animation.height = 100;
-    animation.width = 100;
-    animation.className = "rotate";
-    document.body.appendChild(animation);
-  }
 };
 
 window.onmessage = (event) => {
@@ -81,20 +62,19 @@ window.onmessage = (event) => {
   window.onmessage = null;
 
   messagePort.onmessage = ({ data: { id, payload } }) => {
-    handlers.get(id)?.();
-    handlers.delete(id); // all handlers only last once
+    handlers.get(id)?.(payload); // resolve id
+    // handlers.delete(id); // all handlers only last once
   };
 };
 
-document.getElementById("StartTests").addEventListener("click", () => startTests(false));
-document.getElementById("StartTestsAnimate").addEventListener("click", () => startTests(true));
+document.getElementById("StartTests").addEventListener("click", startTests);
 
-/** @param binary { Uint8Array } */
-async function sendViaMessagePortUsingTransferable(binary) {
+/** @param payload { Uint8Array } */
+async function sendViaMessagePortUsingTransferable(payload) {
   return new Promise((r) => {
     const id = ++nextId;
     handlers.set(id, r);
-    messagePort.postMessage({ id, binary }, [binary]);
+    messagePort.postMessage({ id, payload, t: true }, [payload.buffer]);
   });
 }
 
@@ -107,109 +87,33 @@ async function sendViaMessagePort(payload) {
 }
 
 async function sendViaIpcRenderer(payload) {
+  const id = ++nextId;
   const response = await window.api.invoke("to-main", {
+    id,
     payload,
   });
-  return response;
+  return response.payload;
 }
 
 /** @param animate { boolean } */
-async function startTests(animate) {
+async function startTests() {
   UiHelpers.clearUI();
-  UiHelpers.setButton(true);
-  if (animate) UiHelpers.animate();
-  await runBenchmark();
-}
-
-async function runBenchmark() {
-  const suite = new Benchmark.Suite();
-  suite
-    .add("MessagePort#Json", {
-      defer: true,
-      fn: async function (deferred) {
-        const payload = TestHelpers.generateStaticJson();
-        await sendViaMessagePort(payload);
-        deferred.resolve();
-      },
-    })
-    .add("IpcRenderer#Json", {
-      defer: true,
-      fn: async function (deferred) {
-        const payload = TestHelpers.generateStaticJson();
-        await sendViaIpcRenderer(payload);
-        deferred.resolve();
-      },
-    })
-    .add("MessagePort#Uint8Array", {
-      defer: true,
-      fn: async function (deferred) {
-        const payload = TestHelpers.generateStaticTypedArray(
-          UiHelpers.getPayloadSize()
-        );
-        await sendViaMessagePort(payload);
-        deferred.resolve();
-      },
-    })
-    .add("MessagePort#Uint8ArrayOptimized", {
-      defer: true,
-      fn: async function (deferred) {
-        const payload = TestHelpers.generateStaticTypedArray(
-          UiHelpers.getPayloadSize()
-        );
-        await sendViaMessagePortUsingTransferable(payload.buffer);
-        deferred.resolve();
-      },
-    })
-    .add("IpcRenderer#Uint8Array", {
-      defer: true,
-      fn: async function (deferred) {
-        const payload = TestHelpers.generateStaticTypedArray(
-          UiHelpers.getPayloadSize()
-        );
-        await sendViaIpcRenderer(payload);
-        deferred.resolve();
-      },
-    })
-    // add listeners
-    .on("cycle", function (event) {
-      if (event.aborted) {
-        UiHelpers.setButton(false);
-        console.log(`test '${event.target.name}' was aborted`);
-      }
-      if (event.cancelled) {
-        UiHelpers.setButton(false);
-        console.log(`test '${event.target.name}' was cancelled`);
-      }
-
-      console.log(event.target.toString());
-    })
-    .on("complete", function () {
-      const maxHz = this.sort((a, b) => b.hz - a.hz)[0].hz;
-      console.log(`ran on ${Benchmark.platform.description}`);
-      const results = this.sort(function (a, b) {
-        return b.hz - a.hz;
-      }).reduce(function (prev, cur) {
-        return (
-          (prev[cur.name] = Object.assign(
-            {
-              "ops/s": Number(cur.hz).toFixed(2),
-              samples: cur.stats.sample.length,
-              "margin of error": "\u00B1".concat(
-                Number(cur.stats.rme).toFixed(2),
-                "%"
-              ),
-              ratio: Number(cur.hz / maxHz).toFixed(2),
-            },
-            cur.note !== undefined && {
-              note: cur.note,
-            }
-          )),
-          prev
-        );
-      }, {});
-      UiHelpers.outputTable(results);
-      UiHelpers.setButton(false);
-    })
-    // run async
-    .run();
+  UiHelpers.setLoading(true);
+  const resultsBinary = await new BinaryTest(
+    sendViaMessagePort,
+    sendViaIpcRenderer,
+    sendViaMessagePortUsingTransferable
+  ).run();
+  UiHelpers.outputTable(resultsBinary, "binary");
+  const resultsJson = await new JsonTest(
+    sendViaMessagePort,
+    sendViaIpcRenderer
+  ).run();
+  UiHelpers.outputTable(resultsJson, "json");
+  const resultsThroughput = await new ThroughputTest(
+    handlers,
+    messagePort
+  ).run();
+  UiHelpers.outputTable(resultsThroughput, "throughput");
+  UiHelpers.setLoading(false);
 }
