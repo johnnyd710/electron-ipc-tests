@@ -80,7 +80,6 @@ export class JsonTest {
                     Number(cur.stats.rme).toFixed(2),
                     "%"
                   ),
-                  ratio: Number(cur.hz / maxHz).toFixed(2),
                 },
                 cur.note !== undefined && {
                   note: cur.note,

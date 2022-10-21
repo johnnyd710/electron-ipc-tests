@@ -47,8 +47,6 @@ app.whenReady().then(function () {
     background.webContents.postMessage("port", null, [port2]);
   });
 
-  renderer.webContents.openDevTools();
-
   ipcMain.handle("to-main", (ev, data) => {
     const { payload, id } = data;
     return { id, payload };
