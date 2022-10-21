@@ -1,4 +1,5 @@
 import { payload } from "./payload.js";
+import { animate } from "./canvas.js";
 
 /** @type {MessagePort} */
 let messagePort;
@@ -65,13 +66,10 @@ const UiHelpers = {
     document.getElementById("results-table")?.remove();
   },
   animate: () => {
-    const animation = document.createElement("img");
-    animation.id = "animation";
-    animation.src = "https://i.imgur.com/kDDFvUp.png";
-    animation.height = 100;
-    animation.width = 100;
-    animation.className = "rotate";
-    document.body.appendChild(animation);
+    const canvas = document.createElement("canvas");
+    canvas.id = "animation"
+    document.body.appendChild(canvas);
+    animate(canvas);
   }
 };
 
