@@ -1,4 +1,4 @@
-import { payload } from "./payload.js";
+import { JsonTest } from "./JsonTest.js";
 
 /** @type {MessagePort} */
 let messagePort;
@@ -8,17 +8,8 @@ let nextId = 0;
 
 const TestHelpers = {
   generateStaticTypedArray: (kb) => {
-    const bytes = kb * 1000;
-    const buffer = new ArrayBuffer(bytes);
-    return new Uint8Array(buffer);
-  },
-  generateStaticJson: () => {
-    const jsonPayloadSize = {
-      SMALL: 1,
-      MEDIUM: 2,
-      LARGE: 3,
-    };
-    return payload[jsonPayloadSize.MEDIUM];
+    const bytes = kb * 1024 * 8;
+    return new Uint8Array(bytes).map((v, i) => i);
   },
 };
 
@@ -28,11 +19,9 @@ const UiHelpers = {
   },
   setButton: (enabled) => {
     document.getElementById("StartTests").disabled = enabled;
-    document.getElementById("StartTestsAnimate").disabled = enabled;
   },
   clearUI: () => {
     UiHelpers.resetTable();
-    document.getElementById("animation")?.remove();
   },
   getPayloadSize: () => +document.getElementById("payload").value,
   /** @param s { { [key: string]: {} } } */
@@ -64,15 +53,6 @@ const UiHelpers = {
   resetTable: () => {
     document.getElementById("results-table")?.remove();
   },
-  animate: () => {
-    const animation = document.createElement("img");
-    animation.id = "animation";
-    animation.src = "https://i.imgur.com/kDDFvUp.png";
-    animation.height = 100;
-    animation.width = 100;
-    animation.className = "rotate";
-    document.body.appendChild(animation);
-  }
 };
 
 window.onmessage = (event) => {
@@ -81,20 +61,19 @@ window.onmessage = (event) => {
   window.onmessage = null;
 
   messagePort.onmessage = ({ data: { id, payload } }) => {
-    handlers.get(id)?.();
+    handlers.get(id)?.(id);
     handlers.delete(id); // all handlers only last once
   };
 };
 
-document.getElementById("StartTests").addEventListener("click", () => startTests(false));
-document.getElementById("StartTestsAnimate").addEventListener("click", () => startTests(true));
+document.getElementById("StartTests").addEventListener("click", startTests);
 
-/** @param binary { Uint8Array } */
-async function sendViaMessagePortUsingTransferable(binary) {
+/** @param payload { Uint8Array } */
+async function sendViaMessagePortUsingTransferable(payload) {
   return new Promise((r) => {
     const id = ++nextId;
     handlers.set(id, r);
-    messagePort.postMessage({ id, binary }, [binary]);
+    messagePort.postMessage({ id, payload }, [payload.buffer]);
   });
 }
 
@@ -107,18 +86,25 @@ async function sendViaMessagePort(payload) {
 }
 
 async function sendViaIpcRenderer(payload) {
+  const id = ++nextId;
   const response = await window.api.invoke("to-main", {
+    id,
     payload,
   });
-  return response;
+  return response.id;
 }
 
 /** @param animate { boolean } */
-async function startTests(animate) {
+async function startTests() {
   UiHelpers.clearUI();
   UiHelpers.setButton(true);
-  if (animate) UiHelpers.animate();
-  await runBenchmark();
+  const results = await new JsonTest(
+    sendViaMessagePort,
+    sendViaIpcRenderer
+  ).run();
+  UiHelpers.outputTable(results);
+  UiHelpers.setButton(false);
+  // await runBenchmark();
 }
 
 async function runBenchmark() {
@@ -127,7 +113,9 @@ async function runBenchmark() {
     .add("MessagePort#Json", {
       defer: true,
       fn: async function (deferred) {
-        const payload = TestHelpers.generateStaticJson();
+        const payload = TestHelpers.generateStaticJson(
+          UiHelpers.getPayloadSize()
+        );
         await sendViaMessagePort(payload);
         deferred.resolve();
       },
@@ -135,7 +123,9 @@ async function runBenchmark() {
     .add("IpcRenderer#Json", {
       defer: true,
       fn: async function (deferred) {
-        const payload = TestHelpers.generateStaticJson();
+        const payload = TestHelpers.generateStaticJson(
+          UiHelpers.getPayloadSize()
+        );
         await sendViaIpcRenderer(payload);
         deferred.resolve();
       },
@@ -156,7 +146,7 @@ async function runBenchmark() {
         const payload = TestHelpers.generateStaticTypedArray(
           UiHelpers.getPayloadSize()
         );
-        await sendViaMessagePortUsingTransferable(payload.buffer);
+        await sendViaMessagePortUsingTransferable(payload);
         deferred.resolve();
       },
     })

@@ -1,10 +1,4 @@
-const {
-  ipcMain,
-  BrowserWindow,
-  app,
-  MessageChannelMain,
-  ipcRenderer,
-} = require("electron");
+const { ipcMain, BrowserWindow, app, MessageChannelMain } = require("electron");
 const path = require("path");
 app.allowRendererProcessReuse = true;
 /** @type {BrowserWindow} */
@@ -55,7 +49,8 @@ app.whenReady().then(function () {
 
   renderer.webContents.openDevTools();
 
-  ipcMain.handle("to-main", (ev, payload) => {
-    return { id: payload.id };
+  ipcMain.handle("to-main", (ev, data) => {
+    const { payload, id } = data;
+    return { id, payload };
   });
 });
