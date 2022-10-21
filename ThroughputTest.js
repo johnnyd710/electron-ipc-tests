@@ -12,10 +12,19 @@ export class ThroughputTest {
 
   async run() {
     let results = {};
-    const payloads = [32, 256, 512, 1024];
+    const payloads = [32, 256, 512];
     for (const mb of payloads) {
       const title = `MessagePort#${mb}mb`;
       const ms = await this.testUtility(mb);
+      const seconds = ms / 1000;
+      results[title] = {
+        "MB/s": Number(mb / seconds).toFixed(2),
+        ms: Number(ms).toFixed(2),
+      };
+    }
+    for (const mb of payloads) {
+      const title = `MessagePortOptimized#${mb}mb`;
+      const ms = await this.testUtility(mb, true);
       const seconds = ms / 1000;
       results[title] = {
         "MB/s": Number(mb / seconds).toFixed(2),
@@ -39,9 +48,10 @@ export class ThroughputTest {
 
   /**
    * @param mb { number }
-   * @returns results { Promise<number> }
+   * @param optimize { boolean }
+   * @returns { Promise<number> }
    */
-  async testUtility(mb) {
+  async testUtility(mb, optimize) {
     let returnFn;
     let start;
     const returnPromise = new Promise((r) => (returnFn = r));
@@ -59,13 +69,13 @@ export class ThroughputTest {
     };
     this.handlers.set("throughput-test", listener);
     // send a signal to main start the test
-    this.messagePort.postMessage({ id: "start-throughput-test", mb });
+    this.messagePort.postMessage({ id: "start-throughput-test", mb, optimize });
     return returnPromise;
   }
 
   /**
    * @param mb { number }
-   * @returns results { Promise<number> }
+   * @returns { Promise<number> }
    */
   async testMain(mb) {
     let returnFn;

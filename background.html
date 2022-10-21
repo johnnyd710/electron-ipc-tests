@@ -3,7 +3,11 @@
 <script type="text/javascript">
   /** @type {MessagePort} */
   let messagePort;
-  async function throughputTests(mb) {
+  /**
+   * @param mb { number }
+   * @param optimize { boolean }
+   */
+  async function throughputTests(mb, optimize) {
     // pre-generate the arrays so we don't measure time to create fake data...
     const data = [];
     const sizeOfEachMessage = 1024 * 128; // in bytes
@@ -13,12 +17,17 @@
       curr += (sizeOfEachMessage) / 1024 / 1024; // convert back to mb
     }
     messagePort.postMessage({ id: "throughput-test", payload: { start: true } });
+    // now send them all to the frontend as fast as we can :)
     data.forEach((d, i) => {
       const payload = {
         data: d,
         id: i,
       };
-      messagePort.postMessage({ id: "throughput-test", payload }, [payload.data.buffer]);
+      if (optimize) {
+        messagePort.postMessage({ id: "throughput-test", payload }, [payload.data.buffer]);
+      } else {
+        messagePort.postMessage({ id: "throughput-test", payload });
+      }
     })
     messagePort.postMessage({ id: "throughput-test", payload: { done: true } });
   }
@@ -27,9 +36,9 @@
     messagePort = port;
     window.onmessage = null;
     messagePort.onmessage = ({ data }) => {
-      const { payload, id, t, mb } = data;
+      const { payload, id, t, mb, optimize } = data;
       if (mb) { // if mb is in message it must be a throughput test
-        throughputTests(mb);
+        throughputTests(mb, optimize);
       }
       if (t) {
         messagePort.postMessage({ id, payload }, [payload.buffer]);
