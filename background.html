@@ -8,8 +8,12 @@
     messagePort = port;
     window.onmessage = null;
     messagePort.onmessage = ({ data }) => {
-      const { payload, id } = data;
-      messagePort.postMessage({ id, payload });
+      const { payload, id, t } = data;
+      if (t) {
+        messagePort.postMessage({ id, payload }, [payload.buffer]);
+      } else {
+        messagePort.postMessage({ id, payload });
+      }
     }
   };
 </script>

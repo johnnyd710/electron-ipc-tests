@@ -1,63 +1,90 @@
-import { payload } from "./payload.js";
-
-export class JsonTest {
+export class BinaryTest {
   /**
    * @param sendViaMessagePort { () => Promise<void> }
    * @param sendViaIpcRenderer { () => Promise<void> }
+   * @param sendViaMessagePortOptimized { () => Promise<void> }
    */
-  constructor(sendViaMessagePort, sendViaIpcRenderer) {
+  constructor(
+    sendViaMessagePort,
+    sendViaIpcRenderer,
+    sendViaMessagePortOptimized
+  ) {
     this.sendViaMessagePort = sendViaMessagePort;
     this.sendViaIpcRenderer = sendViaIpcRenderer;
+    this.sendViaMessagePortOptimized = sendViaMessagePortOptimized;
   }
   setup() {
-    this.PAYLOAD_1_KB = payload[1];
-    this.PAYLOAD_26_KB = payload[2];
-    this.PAYLOAD_500_KB = payload[3];
+    // we must generate payload every time (see Transferables)
+    this.getPayload = (kb) => {
+      const bytes = kb * 1024 * 8;
+      return new Uint8Array(bytes).map((v, i) => i);
+    };
   }
   async run() {
     this.setup();
     const suite = new Benchmark.Suite();
     return new Promise((resolve) => {
       suite
-        .add("MessagePort#Json#26KB", {
+        .add("MessagePort#Binary#26KB", {
           defer: true,
           fn: async (deferred) => {
-            await this.sendViaMessagePort(this.PAYLOAD_26_KB);
+            await this.sendViaMessagePort(this.getPayload(26));
             deferred.resolve();
           },
         })
-        .add("IpcRenderer#Json#26KB", {
+        .add("IpcRenderer#Binary#26KB", {
           defer: true,
           fn: async (deferred) => {
-            await this.sendViaIpcRenderer(this.PAYLOAD_26_KB);
+            await this.sendViaIpcRenderer(this.getPayload(26));
             deferred.resolve();
           },
         })
-        .add("MessagePort#Json#500KB", {
+        .add("MessagePortOptimized#Binary#26KB", {
           defer: true,
           fn: async (deferred) => {
-            await this.sendViaMessagePort(this.PAYLOAD_500_KB);
+            await this.sendViaMessagePortOptimized(this.getPayload(26));
             deferred.resolve();
           },
         })
-        .add("IpcRenderer#Json#500KB", {
+        .add("MessagePort#Binary#128KB", {
           defer: true,
           fn: async (deferred) => {
-            await this.sendViaIpcRenderer(this.PAYLOAD_500_KB);
+            await this.sendViaMessagePort(this.getPayload(128));
             deferred.resolve();
           },
         })
-        .add("MessagePort#Json#1KB", {
+        .add("IpcRenderer#Binary#128KB", {
           defer: true,
           fn: async (deferred) => {
-            await this.sendViaMessagePort(this.PAYLOAD_1_KB);
+            await this.sendViaIpcRenderer(this.getPayload(128));
             deferred.resolve();
           },
         })
-        .add("IpcRenderer#Json#1KB", {
+        .add("MessagePortOptimized#Binary#128KB", {
           defer: true,
           fn: async (deferred) => {
-            await this.sendViaIpcRenderer(this.PAYLOAD_1_KB);
+            await this.sendViaMessagePortOptimized(this.getPayload(128));
+            deferred.resolve();
+          },
+        })
+        .add("MessagePort#Binary#1024KB", {
+          defer: true,
+          fn: async (deferred) => {
+            await this.sendViaMessagePort(this.getPayload(1024));
+            deferred.resolve();
+          },
+        })
+        .add("IpcRenderer#Binary#1024KB", {
+          defer: true,
+          fn: async (deferred) => {
+            await this.sendViaIpcRenderer(this.getPayload(1024));
+            deferred.resolve();
+          },
+        })
+        .add("MessagePortOptimized#Binary#1024KB", {
+          defer: true,
+          fn: async (deferred) => {
+            await this.sendViaMessagePortOptimized(this.getPayload(1024));
             deferred.resolve();
           },
         })
