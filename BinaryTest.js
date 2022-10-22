@@ -2,26 +2,27 @@ export class BinaryTest {
   /**
    * @param sendViaMessagePort { () => Promise<void> }
    * @param sendViaIpcRenderer { () => Promise<void> }
-   * @param sendViaMessagePortOptimized { () => Promise<void> }
    */
   constructor(
     sendViaMessagePort,
     sendViaIpcRenderer,
-    sendViaMessagePortOptimized
   ) {
     this.sendViaMessagePort = sendViaMessagePort;
     this.sendViaIpcRenderer = sendViaIpcRenderer;
-    this.sendViaMessagePortOptimized = sendViaMessagePortOptimized;
   }
-  setup() {
-    // we must generate payload every time (see Transferables)
-    this.getPayload = (kb) => {
-      const bytes = kb * 1024 * 8;
-      return new Uint8Array(bytes).map((v, i) => i);
+  /** @param sizes { number[] } */
+  setup(sizes) {
+    const cache = {};
+    for (const size of sizes) {
+      cache[size] = new Uint8Array(size * 1024)
+    }
+    this.getPayload = (size) => {
+      if (!cache[size]) throw Error("Size not found in cache, use setup(sizes) beforehand")
+      return cache[size];
     };
   }
   async run() {
-    this.setup();
+    this.setup([26, 128, 1024]);
     const suite = new Benchmark.Suite();
     return new Promise((resolve) => {
       suite
@@ -39,13 +40,6 @@ export class BinaryTest {
             deferred.resolve();
           },
         })
-        .add("MessagePortOptimized#Binary#26KB", {
-          defer: true,
-          fn: async (deferred) => {
-            await this.sendViaMessagePortOptimized(this.getPayload(26));
-            deferred.resolve();
-          },
-        })
         .add("MessagePort#Binary#128KB", {
           defer: true,
           fn: async (deferred) => {
@@ -60,13 +54,6 @@ export class BinaryTest {
             deferred.resolve();
           },
         })
-        .add("MessagePortOptimized#Binary#128KB", {
-          defer: true,
-          fn: async (deferred) => {
-            await this.sendViaMessagePortOptimized(this.getPayload(128));
-            deferred.resolve();
-          },
-        })
         .add("MessagePort#Binary#1024KB", {
           defer: true,
           fn: async (deferred) => {
@@ -78,13 +65,6 @@ export class BinaryTest {
           defer: true,
           fn: async (deferred) => {
             await this.sendViaIpcRenderer(this.getPayload(1024));
-            deferred.resolve();
-          },
-        })
-        .add("MessagePortOptimized#Binary#1024KB", {
-          defer: true,
-          fn: async (deferred) => {
-            await this.sendViaMessagePortOptimized(this.getPayload(1024));
             deferred.resolve();
           },
         })

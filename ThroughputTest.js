@@ -17,7 +17,7 @@ export class ThroughputTest {
    * @param { string } name
    */
   async _run(fn, results, name) {
-    const dataTransferSize_MB = 512; // 512 MB worth of data from backend to frontend
+    const dataTransferSize_MB = 256; // MB worth of data from backend to frontend
     // do a few so we can take the average
     const title = `${name}#${dataTransferSize_MB}mb`;
     const runs = [];
