@@ -3,26 +3,25 @@ export class BinaryTest {
    * @param sendViaMessagePort { () => Promise<void> }
    * @param sendViaIpcRenderer { () => Promise<void> }
    */
-  constructor(
-    sendViaMessagePort,
-    sendViaIpcRenderer,
-  ) {
+  constructor(sendViaMessagePort, sendViaIpcRenderer) {
     this.sendViaMessagePort = sendViaMessagePort;
     this.sendViaIpcRenderer = sendViaIpcRenderer;
   }
   /** @param sizes { number[] } */
-  setup(sizes) {
+  createPayloads(sizes) {
     const cache = {};
+    // create the we Uint8Array at setup because creating a Uint8Array for each run is expensive
+    // and we are testing latency not the time it takes to create a Uint8Array...
     for (const size of sizes) {
-      cache[size] = new Uint8Array(size * 1024)
+      cache[size] = new Uint8Array(size * 1024);
     }
     this.getPayload = (size) => {
-      if (!cache[size]) throw Error("Size not found in cache, use setup(sizes) beforehand")
+      if (undefined === cache[size]) throw Error("Size not found in cache");
       return cache[size];
     };
   }
   async run() {
-    this.setup([26, 128, 1024]);
+    this.createPayloads([26, 128, 1024]);
     const suite = new Benchmark.Suite();
     return new Promise((resolve) => {
       suite
@@ -73,7 +72,6 @@ export class BinaryTest {
           console.log(event.target.toString());
         })
         .on("complete", function () {
-          const maxHz = this.sort((a, b) => b.hz - a.hz)[0].hz;
           console.log(`ran on ${Benchmark.platform.description}`);
           const results = this.sort(function (a, b) {
             return b.hz - a.hz;

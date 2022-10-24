@@ -16,8 +16,9 @@
       data.push(new Uint8Array(sizeOfEachMessage).map((v, i) => i));
       curr += (sizeOfEachMessage) / 1024 / 1024; // convert back to mb
     }
+    // now that we have generated the data we want to send, alert the frontend the test should start
     messagePort.postMessage({ id: "throughput-test", payload: { start: true } });
-    // now send them all to the frontend as fast as we can :)
+    // now send data to the frontend as fast as we can :)
     data.forEach((d, i) => {
       const payload = {
         data: d,
@@ -29,6 +30,7 @@
         messagePort.postMessage({ id: "throughput-test", payload });
       }
     })
+    // test is complete, alert the frontend
     messagePort.postMessage({ id: "throughput-test", payload: { done: true } });
   }
   window.onmessage = (event) => {
@@ -36,12 +38,9 @@
     messagePort = port;
     window.onmessage = null;
     messagePort.onmessage = ({ data }) => {
-      const { payload, id, t, mb, optimize } = data;
-      if (mb) { // if mb is in message it must be a throughput test
+      const { payload, id, mb, optimize } = data;
+      if (id === "start-throughput-test") {
         throughputTests(mb, optimize);
-      }
-      if (t) {
-        messagePort.postMessage({ id, payload }, [payload.buffer]);
       } else {
         messagePort.postMessage({ id, payload });
       }

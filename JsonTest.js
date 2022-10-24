@@ -9,13 +9,13 @@ export class JsonTest {
     this.sendViaMessagePort = sendViaMessagePort;
     this.sendViaIpcRenderer = sendViaIpcRenderer;
   }
-  setup() {
+  createPayloads() {
     this.PAYLOAD_1_KB = payload[1];
     this.PAYLOAD_26_KB = payload[2];
     this.PAYLOAD_500_KB = payload[3];
   }
   async run() {
-    this.setup();
+    this.createPayloads();
     const suite = new Benchmark.Suite();
     return new Promise((resolve) => {
       suite
@@ -66,7 +66,6 @@ export class JsonTest {
           console.log(event.target.toString());
         })
         .on("complete", function () {
-          const maxHz = this.sort((a, b) => b.hz - a.hz)[0].hz;
           console.log(`ran on ${Benchmark.platform.description}`);
           const results = this.sort(function (a, b) {
             return b.hz - a.hz;

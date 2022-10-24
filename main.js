@@ -52,8 +52,8 @@ app.whenReady().then(function () {
     return { id, payload };
   });
 
-  ipcMain.handle("start-throughput-test", (ev, kb) => {
-    throughputTests(kb);
+  ipcMain.handle("start-throughput-test", (ev, mb) => {
+    throughputTests(mb);
   });
   renderer.webContents.openDevTools();
 });
@@ -67,6 +67,7 @@ async function throughputTests(mb) {
     data.push(new Uint8Array(sizeOfEachMessage).map((v, i) => i));
     curr += sizeOfEachMessage / 1024 / 1024; // convert back to mb
   }
+  // alert the frontend that the test is beginning
   renderer.webContents.send("throughput-test", { start: true });
   // now send them all to the frontend as fast as we can :)
   data.forEach((d, i) => {
@@ -76,5 +77,6 @@ async function throughputTests(mb) {
     };
     renderer.webContents.send("throughput-test", payload);
   });
+  // alert the frontend that the test is finished
   renderer.webContents.send("throughput-test", { done: true });
 }

@@ -12,18 +12,19 @@ export class ThroughputTest {
 
   /**
    * Adds result of _run to results
-   * @param { (mb: number) => Promise<number>} fn
+   * @param { (mb: number) => Promise<number>} initiateTest
    * @param { {[key: string]: number } } results
    * @param { string } name
    */
-  async _run(fn, results, name) {
+  async _run(initiateTest, results, name) {
     const dataTransferSize_MB = 256; // MB worth of data from backend to frontend
     // do a few so we can take the average
     const title = `${name}#${dataTransferSize_MB}mb`;
     const runs = [];
     const maxRuns = 5;
     for (let i = 0; i < maxRuns; i++) {
-      const ms = await fn(dataTransferSize_MB);
+      // start the actual test
+      const ms = await initiateTest(dataTransferSize_MB);
       runs.push(ms);
     }
     const average = runs.reduce((p, c) => p + c, 0) / maxRuns;
@@ -51,6 +52,10 @@ export class ThroughputTest {
   }
 
   /**
+   * Listens for data from the backend.
+   * Sends a signal to the backend to start the test.
+   * Once the backend sends a { start: true } response, starts recording the elapsed time.
+   * Once the backend sends a { done: true } response, function returns with the elapsed time.
    * @param mb { number }
    * @param optimize { boolean }
    * @returns { Promise<number> }
@@ -59,6 +64,7 @@ export class ThroughputTest {
     let returnFn;
     let start;
     const returnPromise = new Promise((r) => (returnFn = r));
+    // collects data from backend
     const collection = [];
     // add a listener to collect data and count responses
     const listener = (data) => {
@@ -78,6 +84,10 @@ export class ThroughputTest {
   }
 
   /**
+   * Listens for data from the backend.
+   * Sends a signal to the backend to start the test.
+   * Once the backend sends a { start: true } response, starts recording the elapsed time.
+   * Once the backend sends a { done: true } response, function returns with the elapsed time.
    * @param mb { number }
    * @returns { Promise<number> }
    */
@@ -85,6 +95,7 @@ export class ThroughputTest {
     let returnFn;
     let start;
     const returnPromise = new Promise((r) => (returnFn = r));
+    // collects data from backend
     const collection = [];
     // add a listener to collect data and count responses
     window.api.addListener("throughput-test", (ev, data) => {
