@@ -64,7 +64,11 @@ async function throughputTests(mb) {
   const sizeOfEachMessage = 128 * 1024 * 10; // in bytes
   let curr = 0;
   while (curr < mb) {
-    data.push(new Uint8Array(sizeOfEachMessage).map((v, i) => i));
+    data.push(
+      new Uint8Array(sizeOfEachMessage).map(() =>
+        Math.floor(Math.random() * 255)
+      )
+    );
     curr += sizeOfEachMessage / 1024 / 1024; // convert back to mb
   }
   // alert the frontend that the test is beginning
