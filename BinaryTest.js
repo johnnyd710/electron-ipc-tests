@@ -13,7 +13,9 @@ export class BinaryTest {
     // create the we Uint8Array at setup because creating a Uint8Array for each run is expensive
     // and we are testing latency not the time it takes to create a Uint8Array...
     for (const size of sizes) {
-      cache[size] = new Uint8Array(size * 1024);
+      cache[size] = new Uint8Array(size * 1024).map(() =>
+        Math.floor(Math.random() * 255)
+      );
     }
     this.getPayload = (size) => {
       if (undefined === cache[size]) throw Error("Size not found in cache");
