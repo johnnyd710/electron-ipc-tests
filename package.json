@@ -2,7 +2,7 @@
   "name": "electron-ipc-tests",
   "main": "main.js",
   "dependencies": {
-    "electron": "^15.2.0"
+    "electron-nightly": "^23.0.0-nightly.20221026"
   },
   "scripts": {
     "start": "electron ."

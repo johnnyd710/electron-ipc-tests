@@ -1,23 +1,47 @@
-const { ipcMain, BrowserWindow, app, MessageChannelMain } = require("electron");
+const {
+  ipcMain,
+  BrowserWindow,
+  app,
+  MessageChannelMain,
+  utilityProcess,
+} = require("electron");
 const path = require("path");
 
-/** @type {BrowserWindow} */
+/** @type {Electron.BrowserWindow} */
 let renderer;
+/** @type {Electron.UtilityProcess} */
+let worker;
 
-// Create a hidden background window
-/** @returns {BrowserWindow} */
-function createBgWindow() {
-  result = new BrowserWindow({
-    show: false,
-    webPreferences: {
-      preload: path.join(__dirname, "preload.js"),
-    },
+/** Create a Utility Process
+ * @param { MessagePort } port
+ * @returns {Electron.UtilityProcess}
+ */
+function createUtilityProcess(port) {
+  let child = utilityProcess.fork(
+    path.join(__dirname, "worker.js"),
+    undefined,
+    { stdio: ["ignore", "pipe", "pipe"] }
+  );
+  // Send utilityPort to the utility process
+  child.on("spawn", () => {
+    child.postMessage("port", [port]);
   });
-  result.loadURL("file://" + __dirname + "/background.html");
-  result.on("closed", () => {
-    console.log("background window closed");
+  // Utility process can also send messages to the main process via process.parentPort
+  // We can listen to them via
+  child.on("message", (data) => {
+    console.log(`MESSAGE FROM CHILD TO MAIN: ${data}`);
   });
-  return result;
+  // Child process emits exit event on termination
+  child.on("exit", (code) => {
+    console.log(`CHILD EXITED WITH CODE: ${code}`);
+  });
+  child.stdout.on("data", function (data) {
+    console.log("stdout: " + data);
+  });
+  child.stderr.on("data", function (data) {
+    console.log("stderr: " + data);
+  });
+  return child;
 }
 
 app.whenReady().then(function () {
@@ -32,19 +56,16 @@ app.whenReady().then(function () {
   renderer.loadURL("file://" + __dirname + "/renderer.html");
   renderer.show();
   renderer.on("closed", () => {
-    // call quit to exit, otherwise the background windows will keep the app running
     app.quit();
   });
 
-  // create background thread
-  const background = createBgWindow();
-
   const { port1, port2 } = new MessageChannelMain();
+
+  // create worker process
+  worker = createUtilityProcess(port2);
+
   renderer.once("ready-to-show", () => {
     renderer.webContents.postMessage("port", null, [port1]);
-  });
-  background.once("ready-to-show", () => {
-    background.webContents.postMessage("port", null, [port2]);
   });
 
   ipcMain.handle("to-main", (ev, data) => {

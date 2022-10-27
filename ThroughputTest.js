@@ -39,11 +39,11 @@ export class ThroughputTest {
   async run() {
     let results = {};
     await this._run((mb) => this.testUtility(mb), results, "MessagePort");
-    await this._run(
-      (mb) => this.testUtility(mb, true),
-      results,
-      "MessagePortOptimized"
-    );
+    // await this._run(
+    //   (mb) => this.testUtility(mb, true),
+    //   results,
+    //   "MessagePortOptimized"
+    // );
     await this._run((mb) => this.testMain(mb), results, "IpcRenderer");
     const sortable = Object.fromEntries(
       Object.entries(results).sort(([, a], [, b]) => b["MB/s"] - a["MB/s"])
